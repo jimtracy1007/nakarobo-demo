@@ -51,7 +51,16 @@ export default function Callback() {
                 if (window.opener) {
                     window.opener.postMessage({
                         type: 'TWITTER_FAILED',
-                        error: err.response?.data || { error: { message: err.message } }
+                        error: err.response?.data || {
+                            error: {
+                                message: err.message,
+                                code: err.code,
+                                data: err.data
+                            },
+                            // Fallback for direct property access if strict structure isn't followed
+                            code: err.code,
+                            data: err.data
+                        }
                     }, window.location.origin)
                     setTimeout(() => window.close(), 2000) // Show error briefly then close
                 }

@@ -40,6 +40,7 @@ apiClient.interceptors.response.use(
       }
       const err = new Error(payload.error || 'Request failed')
       err.code = payload.code
+      err.data = payload.data // Preserve extra data (like conflictAddress)
       throw err
     }
     return payload

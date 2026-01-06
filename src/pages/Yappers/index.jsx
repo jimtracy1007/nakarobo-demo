@@ -136,11 +136,16 @@ export function Yappers() {
             // Error Case
             if (event.data?.type === 'TWITTER_FAILED') {
                 const errData = event.data.error;
-                console.log('Twitter Failed Payload:', errData); // Debug log
+                console.log('Twitter Failed Payload----:', errData); // Debug log
                 const errCode = errData?.code || errData?.error?.code;
 
                 if (errCode === 'TWITTER_ALREADY_BOUND') {
-                    message.error('This Twitter account is connected to another wallet.')
+                    const conflictAddr = errData?.data?.conflictAddress;
+                    console.log('Conflict Address:', conflictAddr, errData?.data?.conflictAddress);
+                    const msg = conflictAddr
+                        ? `This Twitter account is already connected to wallet ${conflictAddr}.`
+                        : 'This Twitter account is connected to another wallet.';
+                    message.error(msg);
                 } else if (errCode === 'WALLET_ALREADY_BOUND') {
                     // Check 'data' property in errData (from backend error object)
                     // errData structure: { code: '...', error: '...', data: { currentTwitterHandle: '...' } }
@@ -152,8 +157,20 @@ export function Yappers() {
                         : 'Your wallet is already connected to a Twitter account.'
                     message.error(msg)
                 } else {
-                    // Fallback: If we have a message in the error object, show it
-                    const fallbackMsg = typeof errData?.error === 'string' ? errData.error : 'Connection failed or code expired. Please try again.';
+                    // Fallback: Try to extract a meaningful message from various error structures
+                    let fallbackMsg = 'Connection failed or code expired. Please try again.';
+
+                    if (typeof errData === 'string') {
+                        fallbackMsg = errData;
+                    } else if (typeof errData?.error === 'string') {
+                        fallbackMsg = errData.error;
+                    } else if (errData?.error?.message) {
+                        fallbackMsg = errData.error.message; // Handle { error: { message: ... } }
+                    } else if (errData?.message) {
+                        fallbackMsg = errData.message;
+                    }
+
+                    console.error("Detailed Twitter Error:", errData);
                     message.error(fallbackMsg);
                 }
             }
