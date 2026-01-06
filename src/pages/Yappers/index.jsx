@@ -7,6 +7,8 @@ import { formatLargeNumber, formatAddress } from '@/utils/format'
 import { PostModal } from '@/components/modals/PostModal'
 import { StakeModal } from '@/components/modals/StakeModal'
 
+import ReferralModal from '@/components/ReferralModal';
+
 export function Yappers() {
     const { message } = App.useApp()
     const [loading, setLoading] = useState(true)
@@ -14,9 +16,11 @@ export function Yappers() {
     const [leaderboard, setLeaderboard] = useState([])
     const [postModalOpen, setPostModalOpen] = useState(false)
     const [stakeModalOpen, setStakeModalOpen] = useState(false)
+    const [referralModalOpen, setReferralModalOpen] = useState(false)
 
     const [searchParams, setSearchParams] = useSearchParams()
     const [isConnected, setIsConnected] = useState(false)
+    // statusLoading is for the initial check or callback processing
     const [statusLoading, setStatusLoading] = useState(true)
 
     const columns = [
@@ -89,8 +93,13 @@ export function Yappers() {
         const checkStatus = async () => {
             try {
                 const status = await yappersAPI.getStatus()
-                console.log('CheckStatus result:', status, 'isBound:', status.isBound)
+                console.log('CheckStatus result:', status, 'isBound:', status.isBound, 'ref:', status.referralStatus)
                 setIsConnected(!!status.isBound)
+
+                // Show referral modal if bound but no referral set/skipped
+                if (status.isBound && status.referralStatus === 'none') {
+                    setReferralModalOpen(true)
+                }
             } catch (error) {
                 console.error("Failed to check twitter status:", error)
             } finally {
@@ -99,52 +108,60 @@ export function Yappers() {
         }
 
         const handleMessage = (event) => {
-            if (event.data === 'TWITTER_CONNECTED') {
-                message.success('Twitter connected successfully!')
-                checkStatus() // Refresh status in parent window
+            console.log('Main window received message:', event.data);
+
+            // Success Case
+            if (event.data === 'TWITTER_CONNECTED' || event.data?.type === 'TWITTER_CONNECTED') {
+                const payload = event.data?.payload || {};
+                // Handle Axios wrapper or direct data
+                const data = payload.data || payload;
+
+                if (data?.isReplacement) {
+                    message.info('Twitter account updated successfully. Your previous binding has been replaced.')
+                } else {
+                    message.success('Twitter connected successfully!')
+                }
+
+                checkStatus().then(() => {
+                    // Force re-check, then if needed show modal
+                    // We check this via state, but checkStatus updates state.
+                    // However, we need to know if we should show modal NOW.
+                    const refStatus = data?.referralStatus;
+                    if (refStatus === 'none') {
+                        setReferralModalOpen(true)
+                    }
+                })
+            }
+
+            // Error Case
+            if (event.data?.type === 'TWITTER_FAILED') {
+                const errData = event.data.error;
+                console.log('Twitter Failed Payload:', errData); // Debug log
+                const errCode = errData?.code || errData?.error?.code;
+
+                if (errCode === 'TWITTER_ALREADY_BOUND') {
+                    message.error('This Twitter account is connected to another wallet.')
+                } else if (errCode === 'WALLET_ALREADY_BOUND') {
+                    // Check 'data' property in errData (from backend error object)
+                    // errData structure: { code: '...', error: '...', data: { currentTwitterHandle: '...' } }
+                    const conflictData = errData?.data || {};
+                    const currentHandle = conflictData.currentTwitterHandle;
+
+                    const msg = currentHandle
+                        ? `Your wallet is already connected to Twitter account @${currentHandle}.`
+                        : 'Your wallet is already connected to a Twitter account.'
+                    message.error(msg)
+                } else {
+                    // Fallback: If we have a message in the error object, show it
+                    const fallbackMsg = typeof errData?.error === 'string' ? errData.error : 'Connection failed or code expired. Please try again.';
+                    message.error(fallbackMsg);
+                }
             }
         }
 
         window.addEventListener('message', handleMessage)
 
-        // Handle OAuth Callback Logic (Run only if code exists)
-        const code = searchParams.get('code')
-        if (code) {
-            setStatusLoading(true)
-            const codeVerifier = sessionStorage.getItem('twitter_code_verifier')
-            const redirectUri = window.location.origin + '/yappers'
-
-            if (!codeVerifier) {
-                message.error('Session expired or invalid. Please try connecting again.')
-                setStatusLoading(false)
-                return
-            }
-
-            yappersAPI.callback(code, codeVerifier, redirectUri)
-                .then(() => {
-                    sessionStorage.removeItem('twitter_code_verifier')
-                    if (window.opener) {
-                        // If running in popup
-                        window.opener.postMessage('TWITTER_CONNECTED', window.location.origin)
-                        window.close()
-                    } else {
-                        // Fallback if not in popup
-                        message.success('Twitter connected successfully!')
-                        setIsConnected(true)
-                        setSearchParams({})
-                        setStatusLoading(false)
-                    }
-                })
-                .catch(err => {
-                    console.error('Callback failed:', err)
-                    message.error('Connection failed or code expired. Checking status...')
-                    setStatusLoading(false)
-                    checkStatus()
-                })
-
-            // If in popup, we stop here (render loading)
-            return () => window.removeEventListener('message', handleMessage)
-        }
+        window.addEventListener('message', handleMessage)
 
         // Normal initialization
         checkStatus()
@@ -161,7 +178,8 @@ export function Yappers() {
     const handleConnectTwitter = async () => {
         try {
             message.loading('Opening authentication window...', 1)
-            const redirectUri = window.location.origin + '/yappers'
+            // Use dedicated callback page
+            const redirectUri = window.location.origin + '/callback'
             const res = await yappersAPI.connect(redirectUri)
             const { url, codeVerifier } = res
 
@@ -304,6 +322,12 @@ export function Yappers() {
                 open={stakeModalOpen}
                 onCancel={() => setStakeModalOpen(false)}
                 availablePoints={info?.stats.claimed} // Use claimed as available source?
+            />
+
+            <ReferralModal
+                visible={referralModalOpen}
+                onClose={() => setReferralModalOpen(false)}
+                onSuccess={() => { }}
             />
         </div>
     )

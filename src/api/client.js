@@ -52,12 +52,10 @@ apiClient.interceptors.response.use(
       if (status === 401) {
         // Token 过期,清除本地存储
         localStorage.removeItem('jwt_token')
-        // 不要强制刷新跳转,防止死循环. 
-        // 也可以选择 window.dispatchEvent(new Event('auth:logout')) 通知 UI
-        // window.location.href = '/'
       }
       
-      return Promise.reject(data?.error || data?.message || 'An error occurred')
+      // Reject with the entire error object so components can access err.response.data
+      return Promise.reject(error)
     } else if (error.request) {
       // 请求发送但没有响应
       return Promise.reject('Network error, please try again')

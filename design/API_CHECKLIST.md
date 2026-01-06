@@ -21,13 +21,13 @@
 | 功能区域 | 操作/显示 | 对应 API / 合约 | 请求方法 | 说明 |
 | :--- | :--- | :--- | :--- | :--- |
 | **Auth** | SIWE 获取 nonce | `/api/auth/nonce` | `POST` | 前端发起 SIWE 登录 |
-| **Auth** | SIWE 验证签名并换 JWT | `/api/auth/verify` | `POST` | 登录成功返回 `token` |
+| **Auth** | SIWE 验证签名并换 JWT | `/api/auth/verify` | `POST` | 登录成功返回 `token`，不再处理邀请码 |
 | **Config** | 获取链配置 | `/api/config/chain` | `GET` | 传 `chainId` 或 `list` |
 
 ---
 
 ## 2. 我的节点 (My Node)
-**对应设计**: `design/mynode.png`  
+**对应设计**: `design/mynode.png`
 **页面路径**: `src/pages/Node/MyNode.jsx`
 
 | 功能区域 | 操作/显示 | 对应 API / 合约 | 请求方法 | 说明 |
@@ -45,7 +45,7 @@
 ---
 
 ## 3. 创建节点 (Get Node Flow)
-**对应设计**: `design/mynode_no_node.png` (部分)  
+**对应设计**: `design/mynode_no_node.png` (部分)
 **页面路径**: `src/pages/Node/GetNode/`
 
 | 功能区域 | 操作/显示 | 对应 API / 合约 | 请求方法 | 说明 |
@@ -58,19 +58,20 @@
 ---
 
 ## 4. 社交互动 (Naka Yappers)
-**对应设计**: `design/nakapt_naka_yappers.png`  
+**对应设计**: `design/nakapt_naka_yappers.png`
 **页面路径**: `src/pages/Yappers/index.jsx`
 
 | 功能区域 | 操作/显示 | 对应 API / 合约 | 请求方法 | 说明 |
 | :--- | :--- | :--- | :--- | :--- |
 | **Connect** | **Connect Twitter** | `/api/yappers/connect` | `GET` | Params: `redirectUri`. Returns `{ url, codeVerifier }` |
-| **Connect** | **Callback** | `/api/yappers/callback` | `GET` | Params: `code`, `codeVerifier`, `redirectUri` |
-| **Status** | **Status Check** | `/api/yappers/status` | `GET` | Check binding status `{ isBound, ... }` |
+| **Connect** | **Callback** | `/api/yappers/callback` | `GET` | 返回 `referralStatus` ('bound', 'skipped', 'none') 和 `isReplacement` |
+| **Status** | **Status Check** | `/api/yappers/status` | `GET` | Check binding status `{ isBound, referralStatus, ... }` |
 | **Stats** | 个人积分 / 排名 | `/api/yappers/scores` | `GET` | `{ cumulativeTotal, daily: [] }` |
 | **Referral** | 我的邀请码 | `/api/referral/me` | `GET` | 展示邀请链接 |
+| **Referral** | **Bind Code** (绑定) | `/api/referral/bind` | `POST` | 此处补填邀请码 `{ referralCode }` |
+| **Referral** | **Skip** (跳过) | `/api/referral/skip` | `POST` | 用户选择跳过邀请绑定 |
 | **Ranking** | Yappers Leaderboard | `/api/yappers/leaderboard` | `GET` | Returns list of users |
 | **Post** | **AI Drafts** | `/api/yappers/ai/drafts` | `POST` | No params required (Auto-generated) |
-| **Referral 状态** | 当前前端占位未接入 | `/api/referral/me` | `GET` | TODO：接入真实接口 |
 
 ---
 

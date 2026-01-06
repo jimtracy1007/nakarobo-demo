@@ -11,6 +11,7 @@ import PointsOverview from './pages/Points/Overview'
 import Yappers from './pages/Yappers'
 import Quests from './pages/Quests'
 import NodeRewards from './pages/Node/Rewards'
+import Callback from './pages/Callback'
 
 
 function App() {
@@ -41,6 +42,7 @@ function App() {
         <AntdApp>
           <BrowserRouter>
             <Routes>
+              <Route path="/callback" element={<Callback />} />
               <Route path="/" element={<Layout />}>
                 <Route index element={<NetworkOverview />} />
                 <Route path="my-node" element={<MyNode />} />

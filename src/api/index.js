@@ -7,11 +7,10 @@ export const authAPI = {
   },
 
   // 验证签名并获取 JWT
-  verify: async (address, signature, referralCode = null) => {
+  verify: async (address, signature) => {
     return apiClient.post('/auth/verify', { 
       address, 
-      signature,
-      referralCode 
+      signature
     })
   },
 }
@@ -183,5 +182,15 @@ export const referralAPI = {
   // 获取邀请统计
   getStats: async () => {
     return apiClient.get('/referral/stats')
+  },
+
+  // 绑定邀请码
+  bind: async (referralCode) => {
+    return apiClient.post('/referral/bind', { referralCode })
+  },
+
+  // 跳过邀请绑定
+  skip: async () => {
+    return apiClient.post('/referral/skip')
   },
 }

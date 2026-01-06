@@ -47,7 +47,8 @@ export function Quests() {
             setSummary(prev => ({
                 ...prev,
                 todayCheckedIn: true,
-                streakDays: res.streak || (prev?.streakDays || 0) + 1
+                streakDays: res.streak || (prev?.streakDays || 0) + 1,
+                nextPoints: res.nextDayPoints // Update prediction for tomorrow
             }))
         } catch (error) {
             console.error(error)
@@ -97,7 +98,23 @@ export function Quests() {
                                 <div style={{ fontSize: 16, marginBottom: 8 }}>
                                     Current Streak: <b style={{ color: '#f7931a', fontSize: 20 }}>{summary?.streakDays} Days</b> 🔥
                                 </div>
-                                <div style={{ color: '#666' }}>Check in daily to boost your earnings multiplier.</div>
+                                <div style={{ color: '#666', marginBottom: 12 }}>Check in daily to boost your earnings multiplier.</div>
+                                <div style={{ display: 'flex', gap: 8 }}>
+                                    {summary?.rules?.map((rule, index) => {
+                                        const isCurrent = summary?.streakDays >= rule.min && (rule.max === null || summary?.streakDays <= rule.max);
+                                        const isPassed = summary?.streakDays > rule.max && rule.max !== null;
+                                        // Simple style for rules
+                                        return (
+                                            <Tag
+                                                key={index}
+                                                color={isCurrent ? 'orange' : (isPassed ? 'default' : 'default')}
+                                                style={{ opacity: isCurrent ? 1 : 0.6 }}
+                                            >
+                                                {rule.min}{rule.max ? `-${rule.max}` : '+'} Days: {rule.points} pts
+                                            </Tag>
+                                        )
+                                    })}
+                                </div>
                             </div>
                             <Button
                                 type="primary"
@@ -108,7 +125,9 @@ export function Quests() {
                                 disabled={summary?.todayCheckedIn}
                                 style={summary?.todayCheckedIn ? { background: '#52c41a', borderColor: '#52c41a' } : {}}
                             >
-                                {summary?.todayCheckedIn ? 'Checked In' : 'Check In (+10 pts)'}
+                                {summary?.todayCheckedIn
+                                    ? `Checked In (Tomorrow +${summary?.nextPoints} pts)`
+                                    : `Check In (+${summary?.nextPoints || 10} pts)`}
                             </Button>
                         </div>
                     </Card>
