@@ -183,6 +183,7 @@ export function Yappers() {
         // Normal initialization
         checkStatus()
 
+
         return () => window.removeEventListener('message', handleMessage)
     }, [])
 
