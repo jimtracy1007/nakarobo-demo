@@ -65,9 +65,9 @@ export function DepositStep({ onBack, onComplete, setupData }) {
             // Mock Deposit Transaction
             await new Promise(resolve => setTimeout(resolve, 2000))
 
-            // Call Backend to create node
-            const mockTxHash = '0x' + Array(64).fill('0').join('')
-            await nodeAPI.createNode({
+            // Note: Node creation is handled on-chain by the contract.
+            // Backend will index the event automatically.
+            console.log('Contract Deposit/Mint successful', {
                 name: setupData.name,
                 avatarId: setupData.avatarId,
                 txHash: mockTxHash

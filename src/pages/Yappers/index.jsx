@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Card, Button, Row, Col, Statistic, Table, Avatar, Badge, Space, App, Empty, Tooltip } from 'antd'
 import { TwitterOutlined, CopyOutlined, ShareAltOutlined } from '@ant-design/icons'
 import { useSearchParams } from 'react-router-dom'
-import { yappersAPI } from '@/api'
+import { yappersAPI, referralAPI } from '@/api'
 import { formatLargeNumber, formatAddress } from '@/utils/format'
 import { PostModal } from '@/components/modals/PostModal'
 import { StakeModal } from '@/components/modals/StakeModal'
@@ -52,8 +52,7 @@ export function Yappers() {
             const [scores, lbData, refData, status] = await Promise.all([
                 yappersAPI.getScores(),
                 yappersAPI.getLeaderboard(),
-                // referralAPI.getMyReferral(), // might fail if not fully implemented in backend yet
-                { code: 'TEMP123' }, // Mock referral for now or use API if ready
+                referralAPI.getMyReferral(),
                 yappersAPI.getStatus()
             ])
 
@@ -61,23 +60,24 @@ export function Yappers() {
             const lbList = Array.isArray(lbData) ? lbData : (lbData?.list || lbData?.items || lbData?.data || []);
 
             setInfo({
-                season: 1,
                 twitter: {
-                    username: status.twitterName || status.twitterHandle || '',
-                    handle: status.twitterHandle || '',
-                    avatarUrl: status.avatarUrl || ''
+                    username: status.twitterName,
+                    handle: '@' + status.twitterHandle,
+                    avatarUrl: status.avatarUrl
                 },
                 stats: {
-                    totalScore: scores.cumulativeTotal || 0,
-                    rank: lbList.find(item => item.user?.handle === status.twitterHandle)?.rank || 0,
-                    rankChange: 0, // Mock
-                    dailyScore: scores.daily?.[0]?.dailyTotal || 0,
-                    pendingClaim: 0, // Should come from API
-                    claimed: 0,
-                    invitedFriends: 0, // Should come from refData
-                    inviteChange: 0
+                    totalScore: scores.totalScore,
+                    rank: lbData.myRank?.rank || 'N/A',
+                    rankChange: '0', // Mock change
+                    dailyScore: scores.yesterdayScore || 0,
+                    pendingClaim: status.pendingRewards || 0,
+                    claimed: status.claimedRewards || 0,
                 },
-                referralCode: refData.code || 'N/A'
+                referral: {
+                    referralCode: refData?.referralCode,
+                    totalInvited: refData?.totalInvited || 0
+                },
+                season: 1
             })
 
             setLeaderboard(lbList)
@@ -282,7 +282,11 @@ export function Yappers() {
                 <Row gutter={24}>
                     <Col span={8}>
                         <Card size="small" style={{ background: '#f5f5f5' }}>
-                            <Statistic title="Daily Score (Yesterday)" value={info?.stats.dailyScore} />
+                            <Statistic
+                                title={<span style={{ color: '#666' }}>Daily Score (Yesterday)</span>}
+                                value={info?.stats.dailyScore}
+                                valueStyle={{ color: '#000', fontWeight: 'bold' }}
+                            />
                         </Card>
                     </Col>
                     <Col span={8}>
@@ -294,8 +298,8 @@ export function Yappers() {
                     </Col>
                     <Col span={8}>
                         <Card size="small" style={{ background: '#fff7e6' }}>
-                            <div style={{ fontSize: 12, color: '#666' }}>Invited Friends: {info?.stats.invitedFriends}</div>
-                            <div style={{ fontWeight: 'bold', margin: '8px 0' }}>Code: {info?.referralCode} <CopyOutlined /></div>
+                            <div style={{ fontSize: 12, color: '#333' }}>Invited Friends: <b>{info?.referral?.totalInvited ?? 0}</b></div>
+                            <div style={{ fontWeight: 'bold', margin: '8px 0', color: '#000', fontSize: '16px' }}>Code: {info?.referral?.referralCode || 'N/A'} <CopyOutlined /></div>
                             <Button type="link" size="small" style={{ padding: 0 }}>View Referral Details</Button>
                         </Card>
                     </Col>

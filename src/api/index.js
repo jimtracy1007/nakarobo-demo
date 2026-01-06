@@ -53,21 +53,6 @@ export const nodeAPI = {
     return apiClient.post('/node/avatar/refresh')
   },
 
-  // 确认头像
-  confirmAvatar: async (avatarId) => {
-    return apiClient.post('/node/avatar/confirm', { avatarId })
-  },
-
-  // 检查名称是否可用
-  checkName: async (name) => {
-    return apiClient.post('/node/check-name', { name })
-  },
-
-  // 创建节点 (首次存款后调用)
-  createNode: async (data) => {
-    // data: { name, avatarId, txHash }
-    return apiClient.post('/node/create', data)
-  },
 
   // 获取资金记录 (Deposit/Redeem/Waive)
   getFundsRecords: async (page = 1, pageSize = 20) => {
