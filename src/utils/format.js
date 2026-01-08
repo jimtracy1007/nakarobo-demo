@@ -72,6 +72,7 @@ export function formatPercent(value, decimals = 2) {
  * @returns {string} 格式化后的数字
  */
 export function formatLargeNumber(num) {
+  if (num === undefined || num === null || num === '') return '0'
   if (num >= 1000000000) {
     return (num / 1000000000).toFixed(1) + 'B'
   }

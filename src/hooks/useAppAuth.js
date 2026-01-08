@@ -106,6 +106,7 @@ export function useAppAuth() {
       
       if (token) {
         localStorage.setItem('jwt_token', token)
+        localStorage.setItem('auth_address', address) // Bind session to address
         setIsAuthenticated(true)
         message.success('Login Successful!')
       } else {
@@ -125,9 +126,26 @@ export function useAppAuth() {
 
   const logout = useCallback(() => {
     localStorage.removeItem('jwt_token')
+    localStorage.removeItem('auth_address')
     setIsAuthenticated(false)
     disconnect()
   }, [disconnect])
+
+  // Check for address mismatch (Account Switching)
+  useEffect(() => {
+    if (isConnected && address && isAuthenticated) {
+        const storedAddress = localStorage.getItem('auth_address')
+        if (storedAddress && storedAddress.toLowerCase() !== address.toLowerCase()) {
+            console.log('[Auth] Address changed (switch account), clearing session', { stored: storedAddress, current: address })
+            // Do not call disconnect() here as we want to stay connected to the NEW account
+            // Just clear the AUTH session
+            localStorage.removeItem('jwt_token')
+            localStorage.removeItem('auth_address')
+            setIsAuthenticated(false)
+            message.info('Account changed. Please sign in again.')
+        }
+    }
+  }, [address, isConnected, isAuthenticated])
 
   return {
     isAuthenticated,
