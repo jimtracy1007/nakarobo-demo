@@ -170,14 +170,14 @@ export function Quests() {
             render: (text) => <span style={{ color: '#ddd' }}>{maskAddress(text)}</span>
         },
         {
-            title: 'Total Points',
+            title: 'Total Score',
             dataIndex: 'totalPoints',
             key: 'totalPoints',
             align: 'right',
             render: (val) => <span style={{ color: '#52c41a' }}>+{val.toLocaleString()}</span>
         },
         {
-            title: 'Week Points',
+            title: 'Week Score',
             dataIndex: 'weekPoints',
             key: 'weekPoints',
             align: 'right',
@@ -200,9 +200,9 @@ export function Quests() {
             }}>
                 <div style={{ display: 'flex', gap: 48 }}>
                     <div>
-                        <div style={{ color: '#888', marginBottom: 8 }}>Total NAKAPT (Score)</div>
+                        <div style={{ color: '#888', marginBottom: 8 }}>Total NAKAPT</div>
                         <div style={{ fontSize: 32, fontWeight: 'bold', color: '#fff' }}>
-                            {summary?.claimed ? summary.claimed.toLocaleString() : '0'}
+                            0
                         </div>
                     </div>
                     <div style={{ borderLeft: '1px solid #303030', paddingLeft: 48 }}>

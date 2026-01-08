@@ -77,7 +77,7 @@ export function PointsOverview() {
             }
         },
         {
-            title: 'Week Points',
+            title: 'Week NAKAPT',
             dataIndex: 'weekPoints',
             key: 'weekPoints',
             align: 'right',
@@ -89,7 +89,7 @@ export function PointsOverview() {
             }
         },
         {
-            title: 'Total Points',
+            title: 'Total NAKAPT',
             dataIndex: 'totalPoints',
             key: 'totalPoints',
             align: 'right',
