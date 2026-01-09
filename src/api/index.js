@@ -127,10 +127,10 @@ export const yappersAPI = {
   },
 
   // 获取榜单
-  getLeaderboard: async (page = 1, pageSize = 10) => {
-    return apiClient.get('/yappers/leaderboard', { 
-      params: { page, pageSize } 
-    })
+  getLeaderboard: async (page = 1, pageSize = 10, search = null) => {
+    const params = { page, pageSize }
+    if (search) params.search = search
+    return apiClient.get('/yappers/leaderboard', { params })
   },
 
   // 解绑 Twitter
@@ -160,6 +160,13 @@ export const questsAPI = {
     return apiClient.get('/quests/claim-proof', {
       params: { activityId }
     })
+  },
+
+  // 获取榜单
+  getLeaderboard: async (page = 1, pageSize = 20, search = null) => {
+    const params = { page, pageSize }
+    if (search) params.search = search
+    return apiClient.get('/quests/leaderboard', { params })
   },
 }
 
