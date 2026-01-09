@@ -75,12 +75,14 @@ export function Yappers() {
             key: 'index',
             align: 'center',
             render: (v) => {
-                // Mock Index for now -> Randomly generated or derived logic
-                const val = v || Math.floor(Math.random() * 20) + 80;
-                const isUp = val > 85;
+                // Use backend index value if available, otherwise show placeholder
+                if (v == null || v === undefined) {
+                    return <div style={{ color: '#666' }}>-</div>;
+                }
+                const isUp = v > 85;
                 return (
                     <div style={{ color: isUp ? '#52c41a' : '#ff4d4f', fontWeight: 'bold' }}>
-                        {val} {isUp ? <RiseOutlined /> : <FallOutlined />}
+                        {v} {isUp ? <RiseOutlined /> : <FallOutlined />}
                     </div>
                 )
             }
@@ -134,6 +136,11 @@ export function Yappers() {
             ])
 
             const lbList = Array.isArray(lbData) ? lbData : (lbData?.list || lbData?.items || lbData?.data || []);
+            // Ensure rank field exists for each item
+            const lbListWithRank = lbList.map((item, index) => ({
+                ...item,
+                rank: item.rank || index + 1  // Use backend rank or fallback to index
+            }));
 
             setInfo({
                 twitter: {
@@ -162,7 +169,7 @@ export function Yappers() {
                 available: myPoints?.available || 0
             });
 
-            setLeaderboard(lbList)
+            setLeaderboard(lbListWithRank)
         } catch (error) {
             console.error("Failed to fetch yappers data:", error)
         } finally {
