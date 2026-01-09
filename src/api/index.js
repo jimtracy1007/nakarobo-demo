@@ -133,6 +133,11 @@ export const yappersAPI = {
     })
   },
 
+  // 解绑 Twitter
+  disconnect: async () => {
+    return apiClient.post('/yappers/disconnect')
+  },
+
   // AI 生成草稿
   generateDrafts: async (promptInput) => {
     return apiClient.post('/yappers/ai/drafts', { promptInput })

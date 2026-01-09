@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react'
 import { Card, Button, Row, Col, Statistic, Table, Avatar, Badge, Space, App, Input, Progress, Typography, Tag, Tooltip } from 'antd'
 import { TwitterOutlined, CopyOutlined, SearchOutlined, UserOutlined, ArrowRightOutlined, RiseOutlined, FallOutlined, DisconnectOutlined } from '@ant-design/icons'
-import { useSearchParams } from 'react-router-dom'
 import { yappersAPI, referralAPI, pointsAPI } from '@/api' // Added pointsAPI for Staking Stats
-import { formatLargeNumber, formatAddress } from '@/utils/format'
+import { formatLargeNumber } from '@/utils/format'
 import { PostModal } from '@/components/modals/PostModal'
 import { StakeModal } from '@/components/modals/StakeModal'
 import ReferralModal from '@/components/ReferralModal';
@@ -23,9 +22,11 @@ export function Yappers() {
     // Header Stats
     const [pointsStats, setPointsStats] = useState({ total: 0, staked: 0, available: 0 })
 
-    const [searchParams, setSearchParams] = useSearchParams()
     const [isConnected, setIsConnected] = useState(false)
     const [statusLoading, setStatusLoading] = useState(true)
+    const pendingClaim = info?.stats?.pendingClaim ?? 0
+    const claimed = info?.stats?.claimed ?? 0
+    const pendingStake = info?.stats?.pendingStake ?? 0
 
     // Columns matching the screenshot
     const columns = [
@@ -89,13 +90,14 @@ export function Yappers() {
             key: 'mindshare',
             width: 150,
             render: (_, r) => {
-                // Mock logic: higher rank = higher mindshare. Safe check for rank.
-                const rank = r.rank || 100;
-                const percent = Math.max(5, 50 - (rank * 0.5));
+                // Mindshare = Daily / Total
+                const daily = r.dailyScore || 0;
+                const total = r.totalScore || r.score || 1;
+                const percent = total > 0 ? (daily / total) * 100 : 0;
                 return (
                     <div>
                         <div style={{ color: '#fff', marginBottom: 4 }}>{percent.toFixed(0)}%</div>
-                        <Progress percent={percent} showInfo={false} strokeColor="#fff" trailColor="#333" size="small" strokeWidth={4} />
+                        <Progress percent={Math.min(percent, 100)} showInfo={false} strokeColor="#fff" trailColor="#333" size="small" strokeWidth={4} />
                     </div>
                 )
             }
@@ -105,7 +107,7 @@ export function Yappers() {
             key: 'dailyScore',
             align: 'right',
             render: (_, r) => (
-                <div style={{ color: '#52c41a' }}>${formatLargeNumber(r.dailyScore || 0)}</div>
+                <div style={{ color: '#52c41a' }}>{formatLargeNumber(r.dailyScore || 0)}</div>
             )
         },
         {
@@ -148,6 +150,7 @@ export function Yappers() {
                 referral: {
                     referralCode: refData?.referralCode || 'GenerateOne',
                     totalInvited: refData?.totalInvited || 0,
+                    dailyChange: refData?.dailyChange || 0,
                     link: `${window.location.origin}/${refData?.referralCode || ''}`
                 },
                 season: 1
@@ -192,10 +195,12 @@ export function Yappers() {
         window.addEventListener('message', handleMessage)
         checkStatus()
         return () => window.removeEventListener('message', handleMessage)
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
     useEffect(() => {
         if (isConnected) fetchData()
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isConnected])
 
     const handleConnectTwitter = async () => {
@@ -211,8 +216,24 @@ export function Yappers() {
                 const top = window.screen.height / 2 - height / 2
                 window.open(url, 'TwitterAuth', `width=${width},height=${height},left=${left},top=${top}`)
             }
-        } catch (error) {
+        } catch (err) {
+            console.error('Failed to initiate connection', err)
             message.error('Failed to initiate connection')
+        }
+    }
+
+    const handleDisconnect = async () => {
+        try {
+            setLoading(true)
+            await yappersAPI.disconnect()
+            setIsConnected(false)
+            setInfo(null)
+            message.success('Disconnected from Twitter')
+        } catch (err) {
+            console.error('Disconnect failed', err)
+            message.error('Disconnect failed')
+        } finally {
+            setLoading(false)
         }
     }
 
@@ -247,40 +268,56 @@ export function Yappers() {
     return (
         <div style={{ maxWidth: 1200, margin: '0 auto', paddingBottom: 60 }}>
             {/* Header Title */}
-            <div style={{ marginBottom: 40 }}>
+            <div style={{ marginBottom: 24 }}>
                 <Title level={1} style={{ color: '#fff', fontSize: 40, margin: 0 }}>Naka Yappers Rewards</Title>
             </div>
 
-            {/* 1. Header Stats (Dark Box) */}
+            {/* Top Summary Cards */}
             <div style={{
-                background: '#0a0a0a',
-                border: '1px solid #1f1f1f',
-                borderRadius: 4,
-                padding: '24px 32px',
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: 16,
                 marginBottom: 32
             }}>
-                <div style={{ display: 'flex', gap: 80 }}>
+                <div style={{
+                    background: '#0d0d0d',
+                    border: '1px solid #1f1f1f',
+                    borderRadius: 12,
+                    padding: '20px 24px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between'
+                }}>
                     <div>
-                        <div style={{ color: '#666', fontSize: 12, marginBottom: 4 }}>Settled NAKAPT</div>
-                        <div style={{ color: '#fff', fontSize: 32, fontFamily: 'monospace' }}>{formatLargeNumber(pointsStats.total)}</div>
-                    </div>
-                    <div>
-                        <div style={{ color: '#666', fontSize: 12, marginBottom: 4 }}>Staked / Unstaked NAKAPT</div>
-                        <div style={{ fontSize: 24 }}>
-                            <span style={{ color: '#f7931a', fontWeight: 'bold' }}>{formatLargeNumber(pointsStats.staked)}</span>
-                            <span style={{ color: '#444', margin: '0 8px' }}>/</span>
-                            <span style={{ color: '#fff' }}>{formatLargeNumber(pointsStats.available)}</span>
+                        <div style={{ color: '#777', fontSize: 12, marginBottom: 8 }}>Pending Claim / Claimed NAKAPT</div>
+                        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                            <span style={{ color: '#f26c0d', fontSize: 28, fontWeight: 600 }}>{formatLargeNumber(pendingClaim)}</span>
+                            <span style={{ color: '#ccc', fontSize: 14 }}>/ {formatLargeNumber(claimed)}</span>
                         </div>
                     </div>
+                    <Button type="primary" style={{ background: '#ff5c00', borderColor: '#ff5c00', minWidth: 110, height: 40 }}>
+                        Claim
+                    </Button>
                 </div>
-                <div>
-                    <Button
-                        type="link"
-                        style={{ color: '#f7931a', padding: 0, fontSize: 16, display: 'flex', alignItems: 'center', gap: 8 }}
-                        onClick={() => setStakeModalOpen(true)}
-                    >
-                        Stake NAKAPT <ArrowRightOutlined style={{ background: '#331d0b', borderRadius: '50%', padding: 6, fontSize: 12 }} />
+
+                <div style={{
+                    background: '#0d0d0d',
+                    border: '1px solid #1f1f1f',
+                    borderRadius: 12,
+                    padding: '20px 24px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between'
+                }}>
+                    <div>
+                        <div style={{ color: '#777', fontSize: 12, marginBottom: 8 }}>Pending Stake / Staked NAKAPT</div>
+                        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                            <span style={{ color: '#f26c0d', fontSize: 28, fontWeight: 600 }}>{formatLargeNumber(pendingStake)}</span>
+                            <span style={{ color: '#ccc', fontSize: 14 }}>/ {formatLargeNumber(pointsStats.staked)}</span>
+                        </div>
+                    </div>
+                    <Button type="primary" style={{ background: '#ff5c00', borderColor: '#ff5c00', minWidth: 110, height: 40 }} onClick={() => setStakeModalOpen(true)}>
+                        Stake
                     </Button>
                 </div>
             </div>
@@ -311,18 +348,25 @@ export function Yappers() {
                 <Row>
                     {/* Left: Profile & Stats */}
                     <Col span={16} style={{ padding: 40, borderRight: '1px solid #1f1f1f' }}>
-                        <Space size={24} style={{ marginBottom: 40 }}>
-                            <Avatar size={64} src={info?.twitter?.avatarUrl} icon={<UserOutlined />} />
+                        <div style={{ display: 'flex', gap: 16, alignItems: 'center', marginBottom: 32 }}>
+                            <Avatar src={info?.twitter?.avatarUrl} icon={<UserOutlined />} size={64} />
                             <div>
-                                <div style={{ fontSize: 24, color: '#fff', fontWeight: 'bold' }}>{info?.twitter?.username}</div>
-                                <div style={{ color: '#666', fontSize: 14, display: 'flex', alignItems: 'center', gap: 12 }}>
+                                <div style={{ color: '#fff', fontSize: 20, fontWeight: 600 }}>{info?.twitter?.username || 'Yapper'}</div>
+                                <div style={{ color: '#777', fontSize: 12, display: 'flex', alignItems: 'center', gap: 12 }}>
                                     ID: {info?.twitter?.handle}
-                                    <Button type="text" size="small" icon={<DisconnectOutlined />} onClick={() => setIsConnected(false)} style={{ color: '#444', fontSize: 12 }}>Disconnect</Button>
+                                    <Button
+                                        size="small"
+                                        icon={<DisconnectOutlined />}
+                                        onClick={handleDisconnect}
+                                        style={{ background: '#111', color: '#bbb', borderColor: '#222', height: 26 }}
+                                    >
+                                        Disconnect
+                                    </Button>
                                 </div>
                             </div>
-                        </Space>
+                        </div>
 
-                        <div style={{ display: 'flex', justifyContent: 'space-between', paddingRight: 60 }}>
+                        <div style={{ display: 'flex', gap: 32, alignItems: 'center' }}>
                             <div>
                                 <div style={{ color: '#666', fontSize: 12, marginBottom: 8 }}>Total Score</div>
                                 <div style={{ color: '#fff', fontSize: 36, fontWeight: 'bold' }}>{formatLargeNumber(info?.stats.totalScore)}</div>
@@ -370,7 +414,16 @@ export function Yappers() {
                 {/* Bottom: Referral Bar */}
                 <div style={{ borderTop: '1px solid #1f1f1f', padding: '16px 32px', background: '#000', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div style={{ color: '#666' }}>
-                        Invited Friends: <span style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>{info?.referral?.totalInvited}</span> <Tag color="#0f2f16" style={{ color: '#52c41a', border: '1px solid #135225', marginLeft: 8 }}>+18 ↗</Tag>
+                        Invited Friends: <span style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>{info?.referral?.totalInvited}</span> 
+                        {info?.referral?.dailyChange !== 0 && (
+                            <Tag color={info?.referral?.dailyChange > 0 ? '#0f2f16' : '#2b0f0f'} style={{ 
+                                color: info?.referral?.dailyChange > 0 ? '#52c41a' : '#ff4d4f', 
+                                border: `1px solid ${info?.referral?.dailyChange > 0 ? '#135225' : '#522d0f'}`, 
+                                marginLeft: 8 
+                            }}>
+                                {info?.referral?.dailyChange > 0 ? '+' : ''}{info?.referral?.dailyChange} {info?.referral?.dailyChange > 0 ? '↗' : '↘'}
+                            </Tag>
+                        )}
                         <span style={{ color: '#f7931a', marginLeft: 16 }}>Refer a friend. Earn 10% of their Base Rewards—no cap, no expiry.</span>
                     </div>
                     <div style={{ display: 'flex', gap: 24, alignItems: 'center' }}>
